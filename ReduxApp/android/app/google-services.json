@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "303307131508",
+    "project_id": "auth-react-native-da463",
+    "storage_bucket": "auth-react-native-da463.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:303307131508:android:eec14f1d64891dbb049f21",
+        "android_client_info": {
+          "package_name": "com.reduxapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "303307131508-0652mcctp102mdir70taotuq248g4uhj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.reduxapp",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "303307131508-hbfjnmo0aga22ch1r8qkege7p74nf1p4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZ1QI2OKfxUJXBNkXr2qvpuIpQCi7LpkQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "303307131508-cs8ecc9qg966p9vchusht5n6lkga8nfl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
