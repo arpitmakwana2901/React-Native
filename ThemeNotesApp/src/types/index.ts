@@ -1,9 +1,22 @@
-// Note interface
+// Attachment types - NEW
+export interface Attachment {
+  id: string;
+  type: 'image' | 'video' | 'camera' | 'link';
+  name: string;
+  url?: string;
+  thumbnail?: string;
+  file?: any; // For local files
+}
+
+// Note interface - Updated
 export interface Note {
   id: string;
   title: string;
   description: string;
   isFavorite: boolean;
+  attachments?: Attachment[]; // ✅ NEW - Optional attachments
+  updatedAt?: string; // ✅ NEW - Last updated timestamp
+  createdAt?: string; // ✅ NEW - Creation timestamp
 }
 
 // Theme type
@@ -19,18 +32,28 @@ export interface ThemeColors {
   buttonText: string;
 }
 
-// Navigation parameter types - ADD NoteDetail
+// Navigation parameter types - ADD EditNote
 export type RootStackParamList = {
-  Home: undefined;
+  MainTabs: undefined;
   AddNote: undefined;
+  EditNote: {
+    noteId: string;
+  };
   Settings: undefined;
   DescriptionEditor: {
     description: string;
     onSave: (description: string) => void;
   };
-  NoteDetail: {  // ✅ NEW
+  NoteDetail: {
     note: Note;
   };
+  UserDetails: undefined;
+};
+
+// Bottom Tab Param List
+export type BottomTabParamList = {
+  Home: undefined;
+  Favorites: undefined;
 };
 
 // Redux State

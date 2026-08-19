@@ -9,12 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 
-// ✅ Alternative typing without native-stack
 type DescriptionEditorScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, 'DescriptionEditor'>;
   route: RouteProp<RootStackParamList, 'DescriptionEditor'>;
@@ -24,6 +24,7 @@ const DescriptionEditorScreen: React.FC<DescriptionEditorScreenProps> = ({
   navigation,
   route,
 }) => {
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { description: initialDescription, onSave } = route.params;
   const [description, setDescription] = useState(initialDescription || '');
@@ -40,7 +41,7 @@ const DescriptionEditorScreen: React.FC<DescriptionEditorScreenProps> = ({
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.primary }]}>
+      <View style={[styles.header, { backgroundColor: colors.primary, paddingTop: Math.max(insets.top, 16) + 8 }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}

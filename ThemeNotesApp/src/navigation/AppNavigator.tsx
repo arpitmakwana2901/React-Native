@@ -2,11 +2,13 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
-import HomeScreen from '../screens/HomeScreen';
+import BottomTabNavigator from './BottomTabNavigator';
 import AddNoteScreen from '../screens/AddNoteScreen';
+import EditNoteScreen from '../screens/EditNoteScreen'; // ✅ NEW
 import SettingsScreen from '../screens/SettingsScreen';
 import DescriptionEditorScreen from '../screens/DescriptionEditorScreen';
-import NoteDetailScreen from '../screens/NoteDetailScreen'; // ✅ NEW
+import NoteDetailScreen from '../screens/NoteDetailScreen';
+import UserDetailsScreen from '../screens/UserDetailsScreen';
 import { useTheme } from '../context/ThemeContext';
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -36,40 +38,49 @@ const AppNavigator = () => {
         }}
       >
         <Stack.Screen 
-          name="Home" 
-          component={HomeScreen} 
-          options={{
-            title: '✨ Theme Notes',
-          }}
+          name="MainTabs" 
+          component={BottomTabNavigator} 
+          options={{ headerShown: false }}
         />
+        
         <Stack.Screen 
           name="AddNote" 
           component={AddNoteScreen} 
-          options={{
+          options={{ 
             title: '📝 New Note',
-          }}
-        />
-        <Stack.Screen 
-          name="Settings" 
-          component={SettingsScreen} 
-          options={{
-            title: '⚙️ Settings',
-          }}
-        />
-        <Stack.Screen
-          name="DescriptionEditor"
-          component={DescriptionEditorScreen}
-          options={{
             headerShown: false,
           }}
         />
-        {/* ✅ NEW - Note Detail Screen */}
+        
+        {/* ✅ NEW - Edit Note Screen */}
+        <Stack.Screen 
+          name="EditNote" 
+          component={EditNoteScreen} 
+          options={{ headerShown: false }}
+        />
+        
+        <Stack.Screen 
+          name="Settings" 
+          component={SettingsScreen} 
+          options={{ title: '⚙️ Settings' }}
+        />
+        
+        <Stack.Screen
+          name="DescriptionEditor"
+          component={DescriptionEditorScreen}
+          options={{ headerShown: false }}
+        />
+        
         <Stack.Screen
           name="NoteDetail"
           component={NoteDetailScreen}
-          options={{
-            headerShown: false, // Custom header in screen
-          }}
+          options={{ headerShown: false }}
+        />
+        
+        <Stack.Screen
+          name="UserDetails"
+          component={UserDetailsScreen}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>

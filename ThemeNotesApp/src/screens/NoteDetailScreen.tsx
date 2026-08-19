@@ -1,15 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Platform,
+  Image,
+  Linking,
+  Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
+import { RootStackParamList, Attachment } from '../types';
+import AttachmentItem from '../components/AttachmentItem';
+import ImagePreviewModal from '../components/ImagePreviewModal';
+import VideoPlayerModal from '../components/VideoPlayerModal';
 
 type NoteDetailScreenProps = NativeStackScreenProps<
   RootStackParamList,
@@ -20,15 +26,57 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({
   navigation,
   route,
 }) => {
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { note } = route.params;
 
-  // Format date from id (timestamp)
+  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
+  const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
+
+  // Video Player state
+  const [selectedVideoAttachment, setSelectedVideoAttachment] = useState<Attachment | null>(null);
+  const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
+
+  const handleOpenLink = async (url?: string) => {
+    if (!url || !url.trim()) {
+      Alert.alert('Cannot Open Link', 'No URL available for this link.');
+      return;
+    }
+
+    let validUrl = url.trim();
+    if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
+      validUrl = `https://${validUrl}`;
+    }
+
+    try {
+      await Linking.openURL(validUrl);
+    } catch (error) {
+      console.error('Link open error:', error);
+      Alert.alert(
+        'Cannot Open Link',
+        `Unable to open "${validUrl}". Please check the web address or ensure a browser is installed.`
+      );
+    }
+  };
+
+  const handleAttachmentPreview = (attachment: Attachment) => {
+    if (attachment.type === 'video') {
+      setSelectedVideoAttachment(attachment);
+      setVideoPlayerVisible(true);
+    } else if (attachment.type === 'link') {
+      handleOpenLink(attachment.url);
+    } else {
+      setPreviewAttachment(attachment);
+      setImagePreviewVisible(true);
+    }
+  };
+
   const getDate = (id: string) => {
-    const date = new Date(parseInt(id));
+    const timeNum = parseInt(id, 10);
+    const date = isNaN(timeNum) ? new Date() : new Date(timeNum);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
@@ -37,8 +85,8 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.primary }]}>
+      {/* Header - Safe Area Inset */}
+      <View style={[styles.header, { backgroundColor: colors.primary, paddingTop: Math.max(insets.top, 16) + 8 }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
@@ -49,7 +97,13 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({
         <Text style={[styles.headerTitle, { color: colors.buttonText }]}>
           Note Detail
         </Text>
-        <View style={styles.placeholder} />
+        <TouchableOpacity
+          onPress={() => navigation.navigate('EditNote', { noteId: note.id })}
+          style={styles.editButton}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.editText, { color: colors.buttonText }]}>✏️ Edit</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Note Content */}
@@ -63,57 +117,55 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({
 
         {/* Favorite Status */}
         <View style={styles.statusRow}>
-          <Text style={[styles.statusLabel, { color: colors.text }]}>
-            Status:
+          <Text style={[styles.statusLabel, { color: colors.text }]}>Status:</Text>
+          <Text style={[styles.statusValue, { color: colors.text }]}>
+            {note.isFavorite ? ' ❤️ Favorite' : ' 🤍 Not Favorite'}
           </Text>
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor: note.isFavorite
-                  ? 'rgba(255, 68, 68, 0.1)'
-                  : 'rgba(0, 0, 0, 0.04)',
-                borderColor: note.isFavorite ? '#FF4444' : 'rgba(0,0,0,0.1)',
-              },
-            ]}
-          >
-            <Text style={[styles.statusValue, { color: colors.text }]}>
-              {note.isFavorite ? '❤️ Favorite' : '🤍 Standard Note'}
-            </Text>
-          </View>
         </View>
 
         {/* Divider */}
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-        {/* Description Card */}
+        {/* Description Label & Scroll Box (Min 6-7 lines visible height) */}
         <Text style={[styles.descriptionLabel, { color: colors.text }]}>
           Description
         </Text>
-        <View
-          style={[
-            styles.descriptionCard,
-            { borderColor: colors.border, backgroundColor: '#FFFFFF' },
-          ]}
-        >
-          <Text style={[styles.description, { color: colors.text }]}>
-            {note.description || 'No description provided'}
-          </Text>
+        <View style={[styles.descriptionContainer, { borderColor: colors.border }]}>
+          <ScrollView
+            style={styles.descriptionScrollView}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+          >
+            <Text style={[styles.description, { color: colors.text }]}>
+              {note.description || 'No description provided'}
+            </Text>
+          </ScrollView>
         </View>
 
+        {/* Attachments */}
+        {note.attachments && note.attachments.length > 0 && (
+          <>
+            <Text style={[styles.attachmentsLabel, { color: colors.text }]}>
+              📎 Attachments ({note.attachments.length})
+            </Text>
+            <View style={styles.attachmentsContainer}>
+              {note.attachments.map((attachment, index) => (
+                <AttachmentItem
+                  key={attachment.id || index.toString()}
+                  attachment={attachment}
+                  onRemove={() => {}} // Read-only in detail view
+                  onPreview={handleAttachmentPreview}
+                />
+              ))}
+            </View>
+          </>
+        )}
+
         {/* Metadata */}
-        <View
-          style={[
-            styles.metadataContainer,
-            { borderColor: colors.border, backgroundColor: '#FFFFFF' },
-          ]}
-        >
-          <Text style={[styles.metadataTitle, { color: colors.text }]}>
-            Information
-          </Text>
+        <View style={[styles.metadataContainer, { borderColor: colors.border }]}>
           <View style={styles.metadataRow}>
             <Text style={[styles.metadataLabel, { color: colors.text }]}>
-              📅 Created
+              📅 Created:
             </Text>
             <Text style={[styles.metadataValue, { color: colors.text }]}>
               {getDate(note.id)}
@@ -121,7 +173,7 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({
           </View>
           <View style={styles.metadataRow}>
             <Text style={[styles.metadataLabel, { color: colors.text }]}>
-              📝 Characters
+              📝 Characters:
             </Text>
             <Text style={[styles.metadataValue, { color: colors.text }]}>
               {note.description.length}
@@ -129,19 +181,46 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({
           </View>
           <View style={styles.metadataRow}>
             <Text style={[styles.metadataLabel, { color: colors.text }]}>
-              📊 Words
+              📊 Words:
             </Text>
             <Text style={[styles.metadataValue, { color: colors.text }]}>
               {note.description.trim() ? note.description.trim().split(/\s+/).length : 0}
             </Text>
           </View>
+          {note.updatedAt && (
+            <View style={styles.metadataRow}>
+              <Text style={[styles.metadataLabel, { color: colors.text }]}>
+                🔄 Updated:
+              </Text>
+              <Text style={[styles.metadataValue, { color: colors.text }]}>
+                {new Date(note.updatedAt).toLocaleString()}
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* ID (for debugging) */}
-        <Text style={[styles.idText, { color: colors.text }]}>
-          ID: {note.id}
-        </Text>
+        <Text style={[styles.idText, { color: colors.text }]}>ID: {note.id}</Text>
       </ScrollView>
+
+      {/* Image Preview Modal */}
+      <ImagePreviewModal
+        visible={imagePreviewVisible}
+        attachment={previewAttachment}
+        onClose={() => {
+          setImagePreviewVisible(false);
+          setPreviewAttachment(null);
+        }}
+      />
+
+      {/* Video Player Modal */}
+      <VideoPlayerModal
+        visible={videoPlayerVisible}
+        attachment={selectedVideoAttachment}
+        onClose={() => {
+          setVideoPlayerVisible(false);
+          setSelectedVideoAttachment(null);
+        }}
+      />
     </View>
   );
 };
@@ -155,35 +234,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    paddingTop: Platform.OS === 'ios' ? 52 : 14,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    paddingBottom: 12,
   },
   backButton: {
     padding: 6,
     minWidth: 60,
   },
   backText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    letterSpacing: 0.3,
   },
-  placeholder: {
-    width: 60,
+  editButton: {
+    padding: 6,
+    minWidth: 60,
+    alignItems: 'flex-end',
+  },
+  editText: {
+    fontSize: 15,
+    fontWeight: '700',
   },
   scrollView: {
     flex: 1,
@@ -193,111 +265,121 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '800',
-    marginBottom: 14,
-    lineHeight: 34,
-    letterSpacing: 0.2,
+    marginBottom: 10,
+    lineHeight: 32,
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: 14,
   },
   statusLabel: {
     fontSize: 15,
-    fontWeight: '700',
-    marginRight: 10,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
+    fontWeight: '600',
+    marginRight: 6,
   },
   statusValue: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 15,
   },
   divider: {
     height: 1,
-    marginBottom: 20,
-    opacity: 0.2,
+    marginBottom: 18,
+    opacity: 0.3,
   },
   descriptionLabel: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    marginBottom: 10,
-    letterSpacing: 0.2,
+    marginBottom: 8,
   },
-  descriptionCard: {
+  descriptionContainer: {
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 22,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    minHeight: 155, // Minimum 6-7 lines height
+    maxHeight: 220, // Enables vertical scrolling smoothly
+  },
+  descriptionScrollView: {
+    flex: 1,
   },
   description: {
-    fontSize: 16,
-    lineHeight: 26,
-    letterSpacing: 0.1,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  attachmentsLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  attachmentsContainer: {
+    marginBottom: 20,
+    gap: 8,
+  },
+  attachmentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    backgroundColor: 'white',
+  },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  attachmentIcon: {
+    fontSize: 22,
+  },
+  thumbnail: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    marginRight: 10,
+  },
+  attachmentInfo: {
+    flex: 1,
+  },
+  attachmentName: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  attachmentUrl: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
   },
   metadataContainer: {
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 18,
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
-  },
-  metadataTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    opacity: 0.7,
+    backgroundColor: 'rgba(0,0,0,0.02)',
   },
   metadataRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 7,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+    paddingVertical: 6,
   },
   metadataLabel: {
     fontSize: 14,
-    opacity: 0.75,
-    fontWeight: '500',
+    opacity: 0.7,
   },
   metadataValue: {
     fontSize: 14,
     fontWeight: '600',
   },
   idText: {
-    fontSize: 12,
-    opacity: 0.35,
+    fontSize: 11,
+    opacity: 0.4,
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: 8,
   },
 });
 
